@@ -121,6 +121,18 @@ def test_quantum_run_validation(client: TestClient):
     assert res.status_code == 422
 
 
+def test_validation_error_uses_unified_envelope(client: TestClient):
+    # A pydantic request-validation failure (wrong-length word) must use the
+    # same {"error": {...}} envelope as GameError, not FastAPI's {"detail": ...}.
+    game_id = _create(client)
+    res = client.post(f"/api/v1/games/{game_id}/guesses", json={"word": "ab"})
+    assert res.status_code == 422
+    body = res.json()
+    assert "detail" not in body
+    assert body["error"]["code"] == "validation_error"
+    assert isinstance(body["error"]["details"], list)
+
+
 def test_quantum_run_top_words_are_candidates(client: TestClient):
     game_id = _create(client)
     answer = _answer(client, game_id)

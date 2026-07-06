@@ -8,7 +8,6 @@ from app.quantum.circuit import circuit_svg
 from app.quantum.engine import (
     MAX_ITERATIONS,
     MAX_SHOTS,
-    N_QUBITS,
     measure,
     run_grover,
 )
@@ -183,7 +182,7 @@ def quantum_run(
             SnapshotEntry(
                 iteration=snap.iteration,
                 top=top,
-                others_probability=float(1.0 - p[top_idx].sum()),
+                others_probability=float(max(0.0, 1.0 - p[top_idx].sum())),
                 candidate_probability=snap.marked_probability(marked),
             )
         )

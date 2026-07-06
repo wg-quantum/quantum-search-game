@@ -8,6 +8,7 @@ every basis state whose index is a word consistent with all feedback so far.
 Grover then amplifies those states uniformly. It never knows the answer.
 """
 
+import threading
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -39,9 +40,16 @@ class QuantumBackend(Protocol):
 class AerStatevectorBackend:
     def __init__(self, seed: int | None = None) -> None:
         self._sim = AerSimulator(method="statevector", seed_simulator=seed)
+        # AerSimulator is not documented thread-safe; serialize .run() calls.
+        self._lock = threading.Lock()
 
     def _grover_circuit(
-        self, n_qubits: int, marked: Sequence[int], iterations: int
+        self,
+        n_qubits: int,
+        marked: Sequence[int],
+        iterations: int,
+        *,
+        snapshots: bool,
     ) -> QuantumCircuit:
         n_states = 1 << n_qubits
         if not marked:
@@ -63,21 +71,24 @@ class AerStatevectorBackend:
         qubits = range(n_qubits)
         qc = QuantumCircuit(n_qubits)
         qc.h(qubits)
-        qc.save_statevector(label="iter_0")
+        if snapshots:
+            qc.save_statevector(label="iter_0")
         for k in range(1, iterations + 1):
             qc.append(oracle, qubits)
             # Diffusion: H^n (2|0><0| - I) H^n = 2|s><s| - I
             qc.h(qubits)
             qc.append(refl0, qubits)
             qc.h(qubits)
-            qc.save_statevector(label=f"iter_{k}")
+            if snapshots:
+                qc.save_statevector(label=f"iter_{k}")
         return qc
 
     def run_grover(
         self, n_qubits: int, marked: Sequence[int], iterations: int
     ) -> list[np.ndarray]:
-        qc = self._grover_circuit(n_qubits, marked, iterations)
-        data = self._sim.run(qc).result().data(0)
+        qc = self._grover_circuit(n_qubits, marked, iterations, snapshots=True)
+        with self._lock:
+            data = self._sim.run(qc).result().data(0)
         return [
             np.abs(np.asarray(data[f"iter_{k}"])) ** 2
             for k in range(iterations + 1)
@@ -86,8 +97,10 @@ class AerStatevectorBackend:
     def sample(
         self, n_qubits: int, marked: Sequence[int], iterations: int, shots: int
     ) -> dict[int, int]:
-        qc = self._grover_circuit(n_qubits, marked, iterations)
+        # No per-iteration snapshots needed for sampling (pure overhead).
+        qc = self._grover_circuit(n_qubits, marked, iterations, snapshots=False)
         qc.measure_all()
-        counts = self._sim.run(qc, shots=shots).result().get_counts()
+        with self._lock:
+            counts = self._sim.run(qc, shots=shots).result().get_counts()
         # bitstring "q_{n-1}...q_0" -> integer state index
         return {int(bits, 2): count for bits, count in counts.items()}

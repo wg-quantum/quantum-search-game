@@ -25,7 +25,7 @@ def compute_feedback(answer: str, guess: str) -> Feedback:
     guess = guess.lower()
     result: list[Tile] = [Tile.GRAY] * len(guess)
 
-    remaining = Counter()
+    remaining: Counter[str] = Counter()
     for a, g in zip(answer, guess):
         if a == g:
             pass  # green, letter consumed
