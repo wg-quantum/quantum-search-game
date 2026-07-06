@@ -1,0 +1,8 @@
+fastapi==0.115.12
+uvicorn==0.34.2
+pydantic==2.11.4
+qiskit==2.5.0
+qiskit-aer==0.17.2
+numpy>=1.26
+matplotlib==3.10.8
+pylatexenc==2.10

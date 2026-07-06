@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0e1220;
+  --color-surface: #161b2c;
+  --color-line: #2a3149;
+  --color-fg: #e8eaf2;
+  --color-muted: #8b92a8;
+  --color-cyan: #5eead4;
+  --color-violet: #a78bfa;
+  --color-tile-green: #4a9d5f;
+  --color-tile-yellow: #c9a23f;
+  --color-tile-gray: #3a4055;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-fg);
+}
+
+@keyframes flip {
+  0% { transform: rotateX(0); }
+  50% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0); }
+}
+.tile-flip { animation: flip 0.45s ease; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+.row-shake { animation: shake 0.35s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-flip, .row-shake { animation: none; }
+}
+
+@keyframes measure-pop {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.measure-pop { animation: measure-pop 0.35s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .measure-pop { animation: none; }
+}

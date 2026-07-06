@@ -1,0 +1,24 @@
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node / frontend
+node_modules/
+dist/
+
+# Env
+.env
+.env.local
+
+# Claude Code local settings
+.claude/settings.local.json
