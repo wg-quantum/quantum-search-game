@@ -83,15 +83,15 @@ python -m pytest tests/ -v
 
 ```bash
 cd frontend
-npm install
-npm run dev   # http://localhost:5173 を開く
+pnpm install
+pnpm dev   # http://localhost:5173 を開く
 ```
 
 開発サーバーは `/api` へのリクエストを `127.0.0.1:8000` にプロキシします(`vite.config.ts`)。
 
 ```bash
-npm test        # vitest
-npm run build   # TypeScript strict チェック + 本番ビルド
+pnpm test        # vitest
+pnpm build       # TypeScript strict チェック + 本番ビルド
 ```
 
 ## API (v1)
