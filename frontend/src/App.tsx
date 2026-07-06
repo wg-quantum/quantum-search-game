@@ -29,15 +29,48 @@ export default function App() {
     () => localStorage.getItem("qw-tutorial-seen") !== "1",
   );
   const submitting = useRef(false);
+  // Bumped on every newGame; async handlers capture it and drop stale responses
+  // so a slow request from a previous game can't overwrite the current one.
+  const gameSeq = useRef(0);
+  const messageTimers = useRef<number[]>([]);
+
+  // Refs mirroring the latest state, so submit/handleKey stay referentially
+  // stable (the keydown listener must not re-subscribe on every keystroke).
+  const currentRef = useRef(current);
+  const metaRef = useRef(meta);
+  const statusRef = useRef(status);
+  useEffect(() => {
+    currentRef.current = current;
+    metaRef.current = meta;
+    statusRef.current = status;
+  }, [current, meta, status]);
 
   const closeTutorial = useCallback(() => {
     localStorage.setItem("qw-tutorial-seen", "1");
     setShowTutorial(false);
   }, []);
 
+  const showMessage = useCallback((text: string) => {
+    messageTimers.current.forEach((id) => window.clearTimeout(id));
+    messageTimers.current = [];
+    setMessage(text);
+    setShaking(true);
+    messageTimers.current.push(
+      window.setTimeout(() => setShaking(false), 400),
+      window.setTimeout(() => setMessage(null), 2000),
+    );
+  }, []);
+
+  useEffect(
+    () => () => messageTimers.current.forEach((id) => window.clearTimeout(id)),
+    [],
+  );
+
   const newGame = useCallback(async () => {
+    const seq = ++gameSeq.current;
     try {
       const res = await api.createGame();
+      if (seq !== gameSeq.current) return;
       setMeta({
         gameId: res.game_id,
         maxTurns: res.max_turns,
@@ -51,8 +84,10 @@ export default function App() {
       setFatal(null);
       setCandidateCount(res.dictionary_size);
       const cands = await api.getCandidates(res.game_id);
+      if (seq !== gameSeq.current) return;
       setCandidateWords(cands.words);
     } catch {
+      if (seq !== gameSeq.current) return;
       setFatal("バックエンドに接続できません。`uvicorn app.main:app --port 8000` が起動しているか確認してください。");
     }
   }, []);
@@ -61,29 +96,28 @@ export default function App() {
     void newGame();
   }, [newGame]);
 
-  const showMessage = (text: string) => {
-    setMessage(text);
-    setShaking(true);
-    window.setTimeout(() => setShaking(false), 400);
-    window.setTimeout(() => setMessage(null), 2000);
-  };
-
   const submit = useCallback(async () => {
+    const meta = metaRef.current;
+    const current = currentRef.current;
     if (!meta || submitting.current) return;
     if (current.length !== meta.wordLength) {
       showMessage("5文字入力してください");
       return;
     }
+    const seq = gameSeq.current;
     submitting.current = true;
     try {
       const res = await api.postGuess(meta.gameId, current);
+      if (seq !== gameSeq.current) return;
       setGuesses((g) => [...g, { word: current, feedback: res.feedback }]);
       setStatus(res.status);
       setCandidateCount(res.candidate_count);
       setCurrent("");
       const cands = await api.getCandidates(meta.gameId);
+      if (seq !== gameSeq.current) return;
       setCandidateWords(cands.words);
     } catch (e) {
+      if (seq !== gameSeq.current) return;
       if (e instanceof ApiError && e.code === "unknown_word") {
         showMessage("辞書にない単語です");
       } else {
@@ -92,11 +126,12 @@ export default function App() {
     } finally {
       submitting.current = false;
     }
-  }, [meta, current]);
+  }, [showMessage]);
 
   const handleKey = useCallback(
     (key: string) => {
-      if (!meta || status !== "playing") return;
+      const meta = metaRef.current;
+      if (!meta || statusRef.current !== "playing") return;
       if (key === "Enter") {
         void submit();
       } else if (key === "Backspace") {
@@ -107,7 +142,7 @@ export default function App() {
         );
       }
     },
-    [meta, status, submit],
+    [submit],
   );
 
   useEffect(() => {
@@ -166,7 +201,11 @@ export default function App() {
         <section className="flex flex-col items-center gap-5">
           <div className="relative">
             {message && (
-              <div className="absolute -top-10 left-1/2 z-10 -translate-x-1/2 rounded-md bg-fg px-3 py-1.5 text-sm font-bold whitespace-nowrap text-ink">
+              <div
+                role="status"
+                aria-live="polite"
+                className="absolute -top-10 left-1/2 z-10 -translate-x-1/2 rounded-md bg-fg px-3 py-1.5 text-sm font-bold whitespace-nowrap text-ink"
+              >
                 {message}
               </div>
             )}
@@ -180,7 +219,12 @@ export default function App() {
           </div>
 
           {status !== "playing" && (
-            <p className="font-display text-lg font-bold" data-testid="result">
+            <p
+              className="font-display text-lg font-bold"
+              data-testid="result"
+              role="status"
+              aria-live="polite"
+            >
               {status === "won"
                 ? `正解! 候補が ${candidateCount} 語まで絞れていました`
                 : "6ターン終了。候補パネルの中に正解がいます"}

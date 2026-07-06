@@ -13,14 +13,6 @@ export interface GuessEntry {
   feedback: TileState[];
 }
 
-export interface GameStateResponse {
-  status: GameStatus;
-  turn: number;
-  max_turns: number;
-  guesses: GuessEntry[];
-  candidate_count: number;
-}
-
 export interface GuessResponse {
   feedback: TileState[];
   status: GameStatus;

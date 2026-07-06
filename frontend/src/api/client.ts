@@ -1,9 +1,11 @@
 import type {
   ApiErrorBody,
   CandidatesResponse,
+  CircuitResponse,
   CreateGameResponse,
-  GameStateResponse,
   GuessResponse,
+  QuantumMeasureResponse,
+  QuantumRunResponse,
 } from "../types";
 
 const BASE = "/api/v1";
@@ -25,8 +27,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
     throw new ApiError(
-      body?.error.code ?? "unknown",
-      body?.error.message ?? `HTTP ${res.status}`,
+      body?.error?.code ?? "unknown",
+      body?.error?.message ?? `HTTP ${res.status}`,
     );
   }
   return res.json() as Promise<T>;
@@ -35,9 +37,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   createGame: () =>
     request<CreateGameResponse>("/games", { method: "POST" }),
-
-  getGame: (gameId: string) =>
-    request<GameStateResponse>(`/games/${gameId}`),
 
   postGuess: (gameId: string, word: string) =>
     request<GuessResponse>(`/games/${gameId}/guesses`, {
@@ -53,13 +52,13 @@ export const api = {
 
 export const quantumApi = {
   run: (gameId: string, iterations: number) =>
-    request<import("../types").QuantumRunResponse>(
+    request<QuantumRunResponse>(
       `/games/${gameId}/quantum/run`,
       { method: "POST", body: JSON.stringify({ iterations }) },
     ),
 
   measure: (gameId: string, iterations: number, shots = 1) =>
-    request<import("../types").QuantumMeasureResponse>(
+    request<QuantumMeasureResponse>(
       `/games/${gameId}/quantum/measure`,
       { method: "POST", body: JSON.stringify({ iterations, shots }) },
     ),
@@ -67,7 +66,7 @@ export const quantumApi = {
 
 export const circuitApi = {
   get: (gameId: string, iterations: number) =>
-    request<import("../types").CircuitResponse>(
+    request<CircuitResponse>(
       `/games/${gameId}/quantum/circuit?iterations=${iterations}`,
     ),
 };

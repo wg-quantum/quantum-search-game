@@ -60,6 +60,7 @@ export function QuantumLab({
 
   // A new guess changes the oracle: previous results no longer apply.
   useEffect(() => {
+    if (timer.current) window.clearInterval(timer.current);
     setResult(null);
     setMeasured(null);
     setCursor(0);

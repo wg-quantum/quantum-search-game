@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { circuitApi } from "../api/client";
 import type { CircuitResponse } from "../types";
 
+/** UTF-8 safe base64 (replaces the deprecated unescape/encodeURIComponent trick). */
+function utf8ToBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
 /** Schematic Grover circuit rendered by Qiskit on the backend.
  *  Served as base64 <img> so the SVG never executes in our DOM. */
 export function CircuitViewer({
@@ -27,7 +35,7 @@ export function CircuitViewer({
   if (error) return <p className="text-xs text-tile-yellow">回路図を取得できませんでした</p>;
   if (!circuit) return <p className="text-xs text-muted">回路図を生成中…</p>;
 
-  const src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(circuit.svg)))}`;
+  const src = `data:image/svg+xml;base64,${utf8ToBase64(circuit.svg)}`;
   return (
     <figure>
       <div className="max-h-72 overflow-auto rounded-lg border border-line bg-ink p-2">
