@@ -55,7 +55,7 @@ export function Board({
     for (let c = 0; c < wordLength; c++) {
       tiles.push(
         guess ? (
-          <Tile key={c} letter={guess.word[c]} state={guess.feedback[c]} delay={c * 90} />
+          <Tile key={c} letter={guess.word[c] ?? ""} state={guess.feedback[c]} delay={c * 90} />
         ) : (
           <Tile key={c} letter={isCurrent ? (current[c] ?? "") : ""} />
         ),

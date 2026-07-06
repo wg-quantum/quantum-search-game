@@ -16,6 +16,7 @@ export function deriveKeyStates(guesses: GuessEntry[]): Map<string, KeyState> {
     for (let i = 0; i < word.length; i++) {
       const letter = word[i];
       const next = feedback[i];
+      if (letter === undefined || next === undefined) continue;
       const prev = states.get(letter) ?? "unused";
       if (RANK[next] > RANK[prev]) states.set(letter, next);
     }

@@ -100,7 +100,7 @@ export function QuantumLab({
     setError(null);
     try {
       const res = await quantumApi.measure(gameId, iterations, 1);
-      setMeasured(res.results[0]);
+      setMeasured(res.results[0] ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "測定に失敗しました");
     }

@@ -12,14 +12,17 @@ const TILE_BG: Record<TileState, string> = {
 function MiniRow({ word, states }: { word: string; states: TileState[] }) {
   return (
     <div className="flex gap-1" aria-hidden="true">
-      {word.split("").map((ch, i) => (
-        <span
-          key={i}
-          className={`flex h-8 w-8 items-center justify-center rounded font-display text-sm font-bold uppercase text-fg ${TILE_BG[states[i]]}`}
-        >
-          {ch}
-        </span>
-      ))}
+      {word.split("").map((ch, i) => {
+        const st = states[i];
+        return (
+          <span
+            key={i}
+            className={`flex h-8 w-8 items-center justify-center rounded font-display text-sm font-bold uppercase text-fg ${st ? TILE_BG[st] : ""}`}
+          >
+            {ch}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -140,6 +143,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
 
   const isLast = step === STEPS.length - 1;
   const s = STEPS[step];
+  if (!s) return null;
 
   return (
     <div
