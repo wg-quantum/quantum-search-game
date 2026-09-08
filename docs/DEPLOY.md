@@ -32,18 +32,24 @@ Dockerfile
 | `IBM_QUANTUM_BACKEND` | (なし) | デバイス固定。空なら稼働中の least busy QPU |
 | `IBM_QUANTUM_SHOTS` | `1024` | 上限 4096 |
 | `IBM_QUANTUM_MAX_JOBS_PER_HOUR` | `3` | プロセス全体の投入上限 |
-| `IBM_QUANTUM_MAX_JOBS_PER_DAY` | `10` | 同上 |
+| `IBM_QUANTUM_MAX_JOBS_PER_DAY` | `6` | 同上 |
 | `HARDWARE_ENABLED` | `1` | `0` にすると認証情報を残したまま実機モードだけ止められる |
 | `ALLOWED_ORIGINS` | dev の localhost 2 つ | フロントを別オリジンから出す場合のみ |
 | `STATIC_DIR` | `app/static`（あれば） | 静的ファイルの場所を明示したいとき |
 
-### QPU 枠の見積もり
+### QPU 枠の見積もり（実測ベース）
 
-IBM Quantum の Open Plan は月あたり約 10 分の QPU 時間です。縮約後のジョブ 1 件は
-数秒なので、既定の「1 日 10 件」でおよそ月 10 分に収まります。**公開デプロイでは
-1 つのトークンを訪問者全員が共有する**ため、上限はセッション単位ではなく
-プロセス全体で数えています（`app/quantum/jobs.py`）。枠を使い切りたくない場合は
+IBM Quantum の Open Plan は月あたり約 10 分 = 600 秒の QPU 時間です。`ibm_marrakesh` で
+測ったところ、縮約後のジョブ 1 件の課金時間（`usage.qpu_charge_time_seconds`）は **2 秒**
+でした。既定の「1 日 6 件」は月あたり約 180 件 ≒ 360 秒で、上限まで使われても枠の
+6 割程度に収まります。
+
+**公開デプロイでは 1 つのトークンを訪問者全員が共有する**ため、上限はセッション単位では
+なくプロセス全体で数えています（`app/quantum/jobs.py`）。枠を使い切りたくない場合は
 `HARDWARE_ENABLED=0` で止めるか、上限を下げてください。
+
+投入から結果までの実時間はキュー次第で、実測では 12 秒と 74 秒でした。空いていれば
+速いですが、混雑時は数十分かかり得るのでフロントはポーリングで待ちます。
 
 ## Hugging Face Spaces（無料・推奨）
 

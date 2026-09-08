@@ -23,7 +23,7 @@ const INFO = {
   shortlist_size: 4,
   shots: 1024,
   max_jobs_per_hour: 3,
-  max_jobs_per_day: 10,
+  max_jobs_per_day: 6,
   jobs_last_hour: 0,
   jobs_last_day: 0,
 };
@@ -32,7 +32,7 @@ function makeJob(
   status: HardwareJobStatus,
   overrides: Partial<HardwareJob> = {},
 ): HardwareJob {
-  const marked = [0, 4, 8, 12];
+  const marked = [0, 1, 2, 3];
   return {
     job_id: "job-1",
     status,

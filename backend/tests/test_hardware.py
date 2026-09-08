@@ -10,6 +10,7 @@ import random
 
 import pytest
 from fastapi.testclient import TestClient
+from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
 
 from app.config import HardwareSettings, Settings
@@ -41,35 +42,40 @@ WORDS = tuple(f"w{i:04d}" for i in range(2315))
 # ---- downscaling ----
 
 @pytest.mark.parametrize(
-    ("m", "n_qubits", "marked"),
+    ("candidates", "n_qubits", "marked"),
     [
         (1, 2, (0,)),
-        (2, 3, (0, 4)),
-        (3, 4, (0, 5, 10)),
-        (4, 4, (0, 4, 8, 12)),
+        (2, 3, (0, 1)),
+        (3, 3, (0, 1)),  # rounded down to a power of two
+        (4, 4, (0, 1, 2, 3)),
+        (500, 4, (0, 1, 2, 3)),  # capped at the shortlist size
     ],
 )
-def test_downscale_shapes(m: int, n_qubits: int, marked: tuple[int, ...]):
-    problem = downscale(list(range(m)), WORDS)
+def test_downscale_shapes(candidates: int, n_qubits: int, marked: tuple[int, ...]):
+    problem = downscale(list(range(candidates)), WORDS)
     assert problem.n_qubits == n_qubits
     assert problem.n_states == 1 << n_qubits
+    # an aligned block starting at 0 is what collapses the oracle to one gate
     assert problem.marked == marked
-    assert problem.words == tuple(WORDS[:m])
+    assert problem.words == tuple(WORDS[: len(marked)])
     # 1/4 padding puts the optimum at a single iteration for every shortlist size
     assert problem.iterations == 1
+    assert len(problem.marked) / problem.n_states == 0.25
 
 
-def test_downscale_truncates_to_shortlist():
+def test_downscale_shortlist_is_a_power_of_two_and_capped():
     problem = downscale(list(range(500)), WORDS)
-    assert len(problem.marked) == SHORTLIST_SIZE
-    assert problem.dictionary_indices == tuple(range(SHORTLIST_SIZE))
+    m = len(problem.marked)
+    assert m == SHORTLIST_SIZE
+    assert m & (m - 1) == 0
     assert problem.iterations <= MAX_ITERATIONS
 
 
 def test_downscale_keeps_dictionary_indices_and_words_aligned():
     problem = downscale([7, 19, 88], WORDS)
-    assert problem.dictionary_indices == (7, 19, 88)
-    assert problem.words == (WORDS[7], WORDS[19], WORDS[88])
+    # three candidates round down to two
+    assert problem.dictionary_indices == (7, 19)
+    assert problem.words == (WORDS[7], WORDS[19])
     assert [problem.word_at(s) for s in problem.marked] == list(problem.words)
     unmarked = next(s for s in range(problem.n_states) if s not in problem.marked)
     assert problem.word_at(unmarked) is None
@@ -97,24 +103,65 @@ def test_hardware_circuit_matches_diagonal_gate_engine(m: int):
 
 
 @pytest.mark.parametrize("m", [1, 2, 3, 4])
-def test_ideal_success_probability_is_near_certain(m: int):
+def test_ideal_success_probability_is_certain(m: int):
     """The whole point of downscaling: any spread the QPU shows is device noise."""
     problem = downscale(list(range(m)), WORDS)
     ideal = ideal_distribution(AerStatevectorBackend(seed=7), problem)
     assert sum(ideal) == pytest.approx(1.0)
-    assert sum(ideal[i] for i in problem.marked) > 0.94
+    # marked/total is exactly 1/4, so one iteration lands exactly on the peak
+    assert sum(ideal[i] for i in problem.marked) == pytest.approx(1.0)
 
 
 def test_hardware_circuit_is_shallow_enough_for_nisq():
     problem = downscale(list(range(4)), WORDS)
     circuit = build_hardware_circuit(problem)
     assert circuit.num_qubits <= 4
-    assert circuit.depth() < 60
+    assert circuit.depth() < 30
+
+
+def test_aligned_block_oracle_collapses_to_one_multi_controlled_gate():
+    """The block form must stay cheap: it is why hardware results are readable.
+
+    Marking {0,1,2,3} on four qubits means "the top two qubits are zero", one
+    CZ. Built per state it is four 3-control gates, which transpiled to
+    ibm_marrakesh cost ~90 two-qubit gates against ~20 for this form.
+    """
+    def entangling_ops(circuit: QuantumCircuit) -> dict[str, int]:
+        return {
+            name: count
+            for name, count in circuit.count_ops().items()
+            if name not in ("x", "h", "z", "barrier")
+        }
+
+    # one control, one target: a single CX carries the whole marked set
+    assert entangling_ops(phase_oracle(4, [0, 1, 2, 3])) == {"cx": 1}
+    # the same set built per state needs four 3-control gates
+    assert entangling_ops(phase_oracle(4, [0, 5, 10, 15])) == {"mcx": 4}
+
+
+@pytest.mark.parametrize("marked", [[0], [0, 1], [0, 1, 2, 3]])
+def test_block_oracle_equals_per_state_oracle(marked: list[int]):
+    """The fast path is an optimisation, not a different oracle."""
+    from qiskit.quantum_info import Operator
+
+    n = 4
+    spread = QuantumCircuit(n)
+    for state in marked:
+        zeros = [q for q in range(n) if not (state >> q) & 1]
+        if zeros:
+            spread.x(zeros)
+        spread.h(n - 1)
+        spread.mcx(list(range(n - 1)), n - 1)
+        spread.h(n - 1)
+        if zeros:
+            spread.x(zeros)
+
+    assert Operator(phase_oracle(n, marked)).equiv(Operator(spread))
 
 
 def test_phase_oracle_rejects_out_of_range_state():
     with pytest.raises(ValueError):
-        phase_oracle(2, [4])
+        phase_oracle(2, [5, 6])  # not an aligned block, so states are checked
 
 
 def test_build_rejects_too_many_iterations():
@@ -307,7 +354,12 @@ def test_submit_then_poll_to_completion():
     job_id = submitted["job_id"]
     runner.updates = [
         JobUpdate(status="RUNNING"),
-        JobUpdate(status="DONE", counts={0: 30, 4: 30, 8: 20, 12: 15, 1: 5}, qpu_seconds=2.0),
+        JobUpdate(
+            status="DONE",
+            # marked states 0-3 plus a noisy leak into state 4
+            counts={0: 30, 1: 30, 2: 20, 3: 15, 4: 5},
+            qpu_seconds=2.0,
+        ),
     ]
     assert client.get(f"/api/v1/quantum/jobs/{job_id}").json()["status"] == "RUNNING"
 
@@ -320,7 +372,7 @@ def test_submit_then_poll_to_completion():
     assert all(s["word"] for s in marked)
     assert all(s["word"] is None for s in done["states"] if not s["is_marked"])
     # the noisy leak into an unmarked state is reported, not hidden
-    assert next(s for s in done["states"] if s["index"] == 1)["count"] == 5
+    assert next(s for s in done["states"] if s["index"] == 4)["count"] == 5
 
     # finished jobs are served locally: no further polling of the service
     runner.updates = []

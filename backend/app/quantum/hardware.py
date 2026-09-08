@@ -67,20 +67,26 @@ def downscale(
     """Map the head of the candidate list onto a small, hardware-sized register.
 
     Candidates arrive in dictionary order, which is frequency order, so the
-    shortlist is the most common words still in play. Marked states are spread
-    evenly across the register (stride = n_states // shortlist) so the result
-    histogram reads as a comb rather than a clump at the left edge.
+    shortlist is the most common words still in play.
+
+    The shortlist is rounded *down* to a power of two, which makes the marked
+    set the aligned block {0..m-1}. That shape is what lets the oracle collapse
+    to a single multi-controlled Z (see phase_oracle) rather than one per word,
+    and on real hardware that is the difference between ~90 and ~30 two-qubit
+    gates after transpilation — i.e. between a result buried in noise and one
+    that is clearly amplified. Showing three candidates instead of four is a
+    cheap price for that.
     """
     if not candidate_indices:
         raise ValueError("candidate_indices must not be empty")
 
-    shortlist = tuple(candidate_indices[:SHORTLIST_SIZE])
-    m = len(shortlist)
-    # ceil(log2(m)) extra qubits for the shortlist, 2 more for the 1/4 padding
-    n_qubits = (PADDING_RATIO.bit_length() - 1) + (m - 1).bit_length()
+    available = min(len(candidate_indices), SHORTLIST_SIZE)
+    m = 1 << (available.bit_length() - 1)
+    shortlist = tuple(candidate_indices[:m])
+    # log2(m) qubits address the shortlist; 2 more dilute it to 1/4 of the space
+    n_qubits = (PADDING_RATIO.bit_length() - 1) + (m.bit_length() - 1)
     n_states = 1 << n_qubits
-    stride = n_states // m
-    marked = tuple(i * stride for i in range(m))
+    marked = tuple(range(m))
     iterations = min(optimal_iterations(m, n_states), MAX_ITERATIONS)
 
     return DownscaledProblem(
@@ -105,10 +111,9 @@ def ideal_distribution(
 
 # ---- circuit construction ----
 
-def _mcz(qc: QuantumCircuit, n_qubits: int) -> None:
-    """Phase flip on |1...1>, as H-MCX-H on the top qubit."""
-    target = n_qubits - 1
-    controls = list(range(target))
+def _mcz(qc: QuantumCircuit, qubits: Sequence[int]) -> None:
+    """Phase flip on |1...1> over `qubits`, as H-MCX-H on the last one."""
+    *controls, target = qubits
     if not controls:
         qc.z(target)
         return
@@ -117,16 +122,43 @@ def _mcz(qc: QuantumCircuit, n_qubits: int) -> None:
     qc.h(target)
 
 
+def _zero_controlled_z(qc: QuantumCircuit, qubits: Sequence[int]) -> None:
+    """Phase flip on |0...0> over `qubits`."""
+    qc.x(qubits)
+    _mcz(qc, qubits)
+    qc.x(qubits)
+
+
+def _aligned_block_size(n_qubits: int, marked: Sequence[int]) -> int | None:
+    """m if marked is exactly {0..m-1} with m a power of two, else None."""
+    m = len(marked)
+    if m == 0 or m & (m - 1) or m > (1 << n_qubits):
+        return None
+    return m if sorted(marked) == list(range(m)) else None
+
+
 def phase_oracle(n_qubits: int, marked: Sequence[int]) -> QuantumCircuit:
     """|x> -> -|x> for x in marked. Qubit q holds bit q of x (Qiskit order)."""
     qc = QuantumCircuit(n_qubits, name="Oracle")
+
+    block = _aligned_block_size(n_qubits, marked)
+    if block is not None:
+        # x < m (m a power of two) is the same statement as "the top
+        # n - log2(m) qubits are all zero", so the entire marked set is one
+        # multi-controlled Z. Emitting it directly matters: the transpiler will
+        # not discover this identity from a per-state loop, and the loop version
+        # costs roughly three times the two-qubit gates on real hardware.
+        free = block.bit_length() - 1
+        _zero_controlled_z(qc, range(free, n_qubits))
+        return qc
+
     for state in marked:
         if not 0 <= state < (1 << n_qubits):
             raise ValueError(f"marked state {state} out of range for {n_qubits} qubits")
         zeros = [q for q in range(n_qubits) if not (state >> q) & 1]
         if zeros:
             qc.x(zeros)
-        _mcz(qc, n_qubits)
+        _mcz(qc, range(n_qubits))
         if zeros:
             qc.x(zeros)
     return qc
@@ -136,9 +168,7 @@ def diffuser(n_qubits: int) -> QuantumCircuit:
     """H^n (X^n MCZ X^n) H^n == -(2|s><s| - I); the global sign is unobservable."""
     qc = QuantumCircuit(n_qubits, name="Diffusion")
     qc.h(range(n_qubits))
-    qc.x(range(n_qubits))
-    _mcz(qc, n_qubits)
-    qc.x(range(n_qubits))
+    _zero_controlled_z(qc, range(n_qubits))
     qc.h(range(n_qubits))
     return qc
 
@@ -247,7 +277,10 @@ class IBMHardwareRunner:
                     self._service = QiskitRuntimeService(
                         channel=self._settings.channel,
                         token=self._settings.token,
-                        instance=self._settings.instance,
+                        # "auto" is the documented way to let the service pick
+                        # the account's instance; passing None picks the same
+                        # one but warns about it on every construction.
+                        instance=self._settings.instance or "auto",
                     )
                 except Exception as exc:
                     raise HardwareUnavailable(
@@ -339,13 +372,19 @@ def _error_message(job: object) -> str | None:
 
 
 def _qpu_seconds(job: object) -> float | None:
-    """Billed QPU time, when the API reports it. Purely informational."""
+    """Billed QPU time, when the API reports it. Purely informational.
+
+    The Runtime API reports this as usage.qpu_charge_time_seconds; the other
+    names are accepted in case a future version renames it.
+    """
     getter = getattr(job, "metrics", None)
     if getter is None:
         return None
     try:
         usage = (getter() or {}).get("usage") or {}
-        seconds = usage.get("quantum_seconds", usage.get("seconds"))
-        return float(seconds) if seconds is not None else None
+        for key in ("qpu_charge_time_seconds", "quantum_seconds", "seconds"):
+            if usage.get(key) is not None:
+                return float(usage[key])
+        return None
     except Exception:  # pragma: no cover - best-effort diagnostics only
         return None

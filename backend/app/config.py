@@ -19,12 +19,13 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 DEV_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 
-# QPU seconds are the scarce resource: the IBM Open Plan grants ~10 minutes of
-# QPU time per month, and one downscaled job costs a few seconds of it. These
-# caps are process-wide (not per-user) precisely because a public deployment
-# shares one token — see docs/DEPLOY.md.
+# QPU seconds are the scarce resource: the Open Plan grants ~10 minutes (600 s)
+# per month, and a measured downscaled job bills 2 s. 6/day is ~180 jobs/month
+# ~= 360 s, which leaves headroom instead of spending the whole budget on the
+# ceiling. These caps are process-wide (not per-user) precisely because a public
+# deployment shares one token — see docs/DEPLOY.md.
 DEFAULT_JOBS_PER_HOUR = 3
-DEFAULT_JOBS_PER_DAY = 10
+DEFAULT_JOBS_PER_DAY = 6
 DEFAULT_SHOTS = 1024
 MAX_SHOTS = 4096
 

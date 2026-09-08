@@ -194,10 +194,10 @@ export function HardwareLab({ gameId }: { gameId: string }) {
         <div className="flex flex-col gap-3">
           <p className="text-xs leading-relaxed text-muted">
             ゲーム本体の12量子ビットのオラクルは、トランスパイルすると数万ゲートの深さになり
-            実機ではノイズに埋もれます。そこで候補の上位{" "}
-            {info.shortlist_size} 語だけを {"{2,3,4}"} 量子ビットの空間に詰め直し、
-            候補の割合を 1/4 にして <span className="font-mono">k = 1</span>{" "}
-            回で済む浅い回路にしたものを実機に投げます。理想値はほぼ 100%
+            実機ではノイズに埋もれます。そこで候補の上位 最大 {info.shortlist_size}{" "}
+            語(2の冪に丸め)を 2〜4 量子ビットの空間に詰め直し、候補の割合を 1/4
+            にして <span className="font-mono">k = 1</span>{" "}
+            回で済む浅い回路にしたものを実機に投げます。理想値はちょうど 100%
             なので、差分はそのまま装置のノイズです。
           </p>
 
