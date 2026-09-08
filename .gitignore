@@ -22,3 +22,7 @@ dist/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Frontend build copied into the backend for single-container serving
+backend/app/static/
+.hf-space/
