@@ -4,6 +4,8 @@ import type {
   CircuitResponse,
   CreateGameResponse,
   GuessResponse,
+  HardwareInfo,
+  HardwareJob,
   QuantumMeasureResponse,
   QuantumRunResponse,
 } from "../types";
@@ -69,4 +71,17 @@ export const circuitApi = {
     request<CircuitResponse>(
       `/games/${gameId}/quantum/circuit?iterations=${iterations}`,
     ),
+};
+
+export const hardwareApi = {
+  /** Whether a QPU is reachable. Does no network I/O server-side, so it is cheap. */
+  info: () => request<HardwareInfo>("/quantum/hardware"),
+
+  /** Enqueue one downscaled Grover job. Returns while it is still queued. */
+  submit: (gameId: string) =>
+    request<HardwareJob>(`/games/${gameId}/quantum/hardware`, {
+      method: "POST",
+    }),
+
+  job: (jobId: string) => request<HardwareJob>(`/quantum/jobs/${jobId}`),
 };

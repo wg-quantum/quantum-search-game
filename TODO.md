@@ -32,10 +32,20 @@
 ## Phase 5 — 発展
 ✅ 回路図表示 (Qiskit mpl描画のSVGをAPIで配信, H⊗12 + Oracle/Diffusionブロック)
 ✅ 演出強化 (測定結果のcollapseアニメーション, reduced-motion対応)
-⏭ IBM Quantumバックエンド — 見送り (認証情報なしでは検証不能なため。QuantumBackend Protocolに実装を差すだけで追加可能, READMEに手順記載)
+✅ IBM Quantum実機バックエンド — ハイブリッド構成で実装。ゲーム進行とスナップショットはAerのまま、実機は「縮約Groverでノイズを見る」パネルとして追加 (D4/リスク表の方針どおり)
+  - 12qubit DiagonalGateは実機では深すぎるため、候補上位4語を2〜4qubitに詰め直し候補割合1/4 → k*=1 の浅い回路に縮約 (`app/quantum/hardware.py`)
+  - オラクルは多重制御Zで再構成。既存のDiagonalGate回路と同一ユニタリであることをテストで検証
+  - SamplerV2で投入 → 202でjob_id即返却 → フロントがバックオフ付きポーリング (キュー待ち数分〜数十分に耐える)
+  - QPU無料枠(月約10分)を守るため、プロセス全体の投入上限をレート制限として実装 (`app/quantum/jobs.py`)
 
 ## Phase 6 — 仕上げ
 ✅ チュートリアル文言 (誤概念対策) — 初回自動表示 + ヘッダー「使い方」で再表示。5ステップで「Groverは答えを知らない」「候補を絞るのはあなた」「over-rotation」を伝える。localStorageで既読記憶、Esc/背景クリックで閉じる、reduced-motion対応
 ✅ README最終化 — 起動手順・辞書出典・アーキテクチャ図・チュートリアル節・UIレイアウト図を整備。Project Status を Phase 6 完了に更新
 ⏭ スクリーンショット — 実物撮影は見送り (README内テキストのUIレイアウト図で代替)
-⏭ Docker — 見送り (DESIGN.md D7で「任意」。`git clone` → 手順通りで動くことは保証済み)
+✅ Docker — 単一コンテナ (FastAPIがAPI + ビルド済みフロントを同一オリジンで配信, CORS不要)
+
+## Phase 7 — デプロイ
+✅ Dockerfile (multi-stage: pnpm build → python:3.13-slim, port 7860)
+✅ 環境変数による設定 (`app/config.py`, `backend/.env.example`) — 未設定なら従来どおりAerのみで動作
+✅ Hugging Face Docker Space への1コマンド投入 (`deploy/hf_space.py`, Secret登録込み)
+✅ docs/DEPLOY.md — 構成図・環境変数表・QPU枠の見積もり・Render代替案

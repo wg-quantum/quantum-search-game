@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api } from "./api/client";
 import { Board } from "./components/Board";
 import { CandidatePanel } from "./components/CandidatePanel";
+import { HardwareLab } from "./components/HardwareLab";
 import { QuantumLab } from "./components/QuantumLab";
 import { Keyboard } from "./components/Keyboard";
 import { Tutorial } from "./components/Tutorial";
@@ -252,6 +253,9 @@ export default function App() {
         playing={status === "playing"}
         onSuggest={(word) => setCurrent(word)}
       />
+
+      {/* Renders nothing unless the server has IBM Quantum credentials. */}
+      <HardwareLab gameId={meta.gameId} />
     </main>
   );
 }

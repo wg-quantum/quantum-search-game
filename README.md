@@ -105,6 +105,9 @@ pnpm build       # TypeScript strict チェック + 本番ビルド
 | POST | `/api/v1/games/{id}/quantum/run` | Grover実行 `{"iterations": k}` — iteration 0〜k の確率分布スナップショットを返す |
 | POST | `/api/v1/games/{id}/quantum/measure` | 測定 `{"iterations": k, "shots": n}` — 最終状態からサンプリング |
 | GET | `/api/v1/games/{id}/quantum/circuit?iterations=k` | Grover回路図 (Qiskit生成SVG, 図は最大3反復分) |
+| GET | `/api/v1/quantum/hardware` | 実機モードが使えるか（ネットワークアクセスなし・軽量） |
+| POST | `/api/v1/games/{id}/quantum/hardware` | 縮約Groverを実機QPUへ投入。`202` でジョブIDを即返す |
+| GET | `/api/v1/quantum/jobs/{job_id}` | 実機ジョブのポーリング。完了後はローカル記録から返す |
 
 エラー形式: `{"error": {"code": "...", "message": "..."}}`
 
@@ -120,15 +123,46 @@ pnpm build       # TypeScript strict チェック + 本番ビルド
 
 `backend/data/words.txt` — [Stanford GraphBase](https://www-cs-faculty.stanford.edu/~knuth/sgb.html) (Donald E. Knuth) の5文字英単語リスト([five-letter-words](https://github.com/charlesreid1/five-letter-words) 経由)から、使用頻度上位2315語を採用。12量子ビット(4096状態)に収まるサイズ。
 
+## 実機モード (IBM Quantum QPU)
+
+サーバに `IBM_QUANTUM_TOKEN` があるときだけ、盤面の下に **実機モード** パネルが現れます。
+無い場合は API が `available: false` を返し、パネルは描画されません（シミュレータのみで完動）。
+
+**なぜ「縮約」するのか。** ゲーム本体のオラクルは 12 量子ビット・4096 位相の
+`DiagonalGate` です。これをトランスパイルすると 2 量子ビットゲートが数万段になり、
+現行の NISQ デバイスでは出力がほぼ一様分布 — つまり信号が残りません
+（`docs/DESIGN.md` の D4 とリスク表に元々書かれていた通りです）。
+
+そこで実機モードは**同じアルゴリズムを縮約**します。
+
+- 候補列（辞書順 = 頻度順）の先頭 4 語だけを取り、2〜4 量子ビットの空間に振り直す
+- 候補の割合をちょうど 1/4 に薄めるので、最適反復数は常に `k* = 1`
+- 理想成功確率は 95〜100%、回路は 2 量子ビットゲート数十個 — 実機が得意な領域
+- したがって**実機との差分がそのまま装置のノイズ**として読める
+
+オラクルは `DiagonalGate` ではなく多重制御 Z で組み直してありますが、同じユニタリです
+（`tests/test_hardware.py` が両者の分布一致を検証しています）。ジョブは
+`SamplerV2` で投入し、`202` で job_id を即返してフロントがポーリングします — 実機の
+キュー待ちは数分〜数十分になり得るため、HTTP リクエストを待たせません。
+
+QPU 時間は Open Plan で月約 10 分しかなく、公開デプロイでは 1 つのトークンを訪問者
+全員が共有します。そのため投入上限はプロセス全体で数えています（既定 1 時間 3 件 /
+1 日 10 件）。詳細と環境変数は [docs/DEPLOY.md](./docs/DEPLOY.md)。
+
+## デプロイ
+
+FastAPI が API とビルド済みフロントエンドの両方を配信する単一コンテナ構成
+（`Dockerfile`）。無料の Hugging Face Docker Space に 1 コマンドで出せます。
+
+```bash
+HF_TOKEN=hf_xxx IBM_QUANTUM_TOKEN=xxx python deploy/hf_space.py <owner>/quantum-wordle
+```
+
+手順・環境変数・QPU 枠の見積もりは [docs/DEPLOY.md](./docs/DEPLOY.md)。
+
 ## Project Status
 
-Phase 1〜6 完了。バックエンド 35 テスト + フロント 13 テスト通過、TypeScript strict ビルド・E2E 疎通確認済み。IBM Quantum 実機連携（下記）と Docker 化は任意扱いで未実装。
-
-## IBM Quantum 実機について (future work)
-
-実機連携は未実装ですが、接続点は用意済みです。`app/quantum/backend.py` の `QuantumBackend` Protocol (`run_grover` / `sample`) を実装するクラスを追加し、`create_app(quantum_backend=...)` に渡せば差し替わります。実装時の注意:
-
-- `qiskit-ibm-runtime` を追加し、SamplerV2 で `sample` 相当を実装する (状態ベクトル取得は実機では不可のため、`run_grover` のスナップショットはシミュレータ専用のまま残す)
-- 12量子ビットのDiagonalオラクルはトランスパイル後に非常に深い回路になり、現行NISQデバイスではノイズで結果がほぼ一様分布になる。これは「実機のノイズを観察する」教材として扱い、ゲーム進行には使わないこと (docs/DESIGN.md リスク表参照)。
+Phase 1〜6 完了 + 実機モードとデプロイを追加。バックエンド 72 テスト + フロント 24 テスト通過、
+TypeScript strict ビルド・E2E 疎通確認済み。
 
 進捗は [TODO.md](./TODO.md)。

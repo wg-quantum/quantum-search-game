@@ -15,7 +15,7 @@ Last updated: 2026-07-06
 | D4 | 実行バックエンド | **シミュレータ(qiskit-aer)を正**とする。IBM Quantum実機は「あれば嬉しい」扱いで、`QuantumBackend`抽象の差し替えで後付けできる構造にする |
 | D5 | 利用規模 | 個人利用。セッションはインメモリ辞書で保持。DB/Redisは導入しない |
 | D6 | Grover反復回数 | **ユーザーが操作可能**(スライダー)。最適値 ⌊π/4·√(N/M)⌋ をUIに表示しつつ、回しすぎ(over-rotation)で確率が下がる体験を意図的に許容する |
-| D7 | デプロイ | localhostで完結。`git clone` → 手順通りで動くことをREADMEで保証する。Dockerは任意(Phase6で検討) |
+| D7 | デプロイ | localhostで完結することを引き続き保証する。加えてPhase 7で単一コンテナ化(FastAPIがAPI + ビルド済みフロントを同一オリジンで配信)し、無料のHugging Face Docker Spaceへ出せるようにした。詳細は docs/DEPLOY.md |
 
 ---
 
@@ -34,11 +34,18 @@ ARCHITECTURE.mdの2つの図を以下の1つに統合する。
 │  ├ API Layer        … ルーティング/入出力検証 │
 │  ├ Game Logic       … 判定・候補計算・状態管理 │
 │  └ Quantum Engine   … Oracle構築/Grover実行  │
-│       └ QuantumBackend (抽象)             │
-│            ├ AerSimulatorBackend (default)│
-│            └ IBMQuantumBackend (future)   │
+│       ├ QuantumBackend (抽象)             │
+│       │    └ AerStatevectorBackend        │
+│       └ IBMHardwareRunner (縮約Grover専用) │
+│            … SamplerV2で実機投入 + ジョブ登録 │
 └─────────────────────────────────────────┘
 ```
+
+実機は `QuantumBackend` の差し替えではなく**別経路**にした。理由は D4 の方針
+(シミュレータを正とする) に加えて、実機では状態ベクトルが取れず `run_grover` の
+スナップショットを実装できないこと、そしてゲーム本体の12量子ビットのオラクルが
+実機では深すぎること。実機経路は問題を縮約したうえでノイズ観察に使う
+(docs/DEPLOY.md, README「実機モード」)。
 
 原則:
 

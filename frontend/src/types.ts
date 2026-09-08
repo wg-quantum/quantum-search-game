@@ -70,3 +70,54 @@ export interface CircuitResponse {
   drawn_iterations: number;
   svg: string;
 }
+
+// ---- hardware mode (IBM Quantum QPU) ----
+
+export interface HardwareInfo {
+  available: boolean;
+  reason: string | null;
+  configured_backend: string | null;
+  shortlist_size: number;
+  shots: number;
+  max_jobs_per_hour: number;
+  max_jobs_per_day: number;
+  jobs_last_hour: number;
+  jobs_last_day: number;
+}
+
+export type HardwareJobStatus =
+  | "INITIALIZING"
+  | "QUEUED"
+  | "RUNNING"
+  | "DONE"
+  | "CANCELLED"
+  | "ERROR";
+
+export interface HardwareStateProb {
+  index: number;
+  /** null = padding state, present only to dilute the candidates to 1/4. */
+  word: string | null;
+  is_marked: boolean;
+  ideal_probability: number;
+  hardware_probability: number | null;
+  count: number | null;
+}
+
+export interface HardwareJob {
+  job_id: string;
+  status: HardwareJobStatus;
+  backend: string;
+  n_qubits: number;
+  n_states: number;
+  iterations: number;
+  shots: number;
+  depth: number;
+  two_qubit_gates: number;
+  shortlist: string[];
+  ideal_marked_probability: number;
+  hardware_marked_probability: number | null;
+  states: HardwareStateProb[];
+  error: string | null;
+  qpu_seconds: number | null;
+  elapsed_seconds: number;
+}
