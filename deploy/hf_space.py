@@ -39,8 +39,9 @@ INCLUDE = (
     "frontend/public",
 )
 
-# Test files are excluded from the image; dropping them keeps the build context
-# small without changing what runs.
+# Build artefacts and environments only. Frontend test files ship even though
+# the image does not run them, so that `pnpm build` in the Space sees exactly
+# the tree that was verified locally.
 EXCLUDE_NAMES = {
     "__pycache__",
     ".pytest_cache",
@@ -48,9 +49,9 @@ EXCLUDE_NAMES = {
     "node_modules",
     "dist",
     ".DS_Store",
-    "static",
+    "static",  # the frontend build gets copied in by the Dockerfile
 }
-EXCLUDE_SUFFIXES = (".pyc", ".test.ts", ".test.tsx")
+EXCLUDE_SUFFIXES = (".pyc",)
 
 
 def _ignore(directory: str, names: list[str]) -> set[str]:
