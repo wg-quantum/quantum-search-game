@@ -170,7 +170,7 @@ export default function App() {
   if (!meta) return null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col items-center gap-6 p-4 sm:p-6">
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center gap-5 p-4 sm:p-6">
       {showTutorial && <Tutorial onClose={closeTutorial} />}
       <header className="flex w-full items-center justify-between border-b border-line pb-4">
         <div>
@@ -238,21 +238,20 @@ export default function App() {
           />
         </section>
 
-        <div className="flex w-full flex-col gap-6 lg:w-80">
-          <CandidatePanel
-            count={candidateCount}
-            total={meta.dictionarySize}
-            words={candidateWords}
-          />
-          <QuantumLab
-            gameId={meta.gameId}
-            candidateCount={candidateCount}
-            guessCount={guesses.length}
-            playing={status === "playing"}
-            onSuggest={(word) => setCurrent(word)}
-          />
-        </div>
+        <CandidatePanel
+          count={candidateCount}
+          total={meta.dictionarySize}
+          words={candidateWords}
+        />
       </div>
+
+      <QuantumLab
+        gameId={meta.gameId}
+        candidateCount={candidateCount}
+        guessCount={guesses.length}
+        playing={status === "playing"}
+        onSuggest={(word) => setCurrent(word)}
+      />
     </main>
   );
 }
