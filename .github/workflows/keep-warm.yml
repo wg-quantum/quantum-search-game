@@ -1,0 +1,52 @@
+# Render's free instances spin down after 15 minutes without traffic and take
+# about a minute to wake, which reads as "the demo is broken" to a first-time
+# visitor. A periodic ping avoids that.
+#
+# Why only part of the day: the free plan grants 750 instance-hours per month,
+# and a 31-day month is 744 hours — pinging round the clock would consume
+# essentially the entire budget, and overrunning it suspends the service until
+# the next month. 16 hours a day is ~496 h/month, which keeps the demo warm
+# through the Japanese day and leaves a wide margin.
+#
+# Set the repository variable RENDER_URL (Settings > Secrets and variables >
+# Actions > Variables) to the service URL, e.g. https://quantum-wordle.onrender.com
+# The workflow no-ops until that exists.
+#
+# GitHub's scheduled runs are best-effort and can be delayed past 15 minutes
+# under load, so treat this as "usually warm", not a guarantee.
+name: keep-warm
+
+on:
+  schedule:
+    # every 10 minutes, 08:00-23:59 JST (= 23:00-14:59 UTC), offset off the hour
+    - cron: "4,14,24,34,44,54 23,0-14 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the health endpoint
+        env:
+          RENDER_URL: ${{ vars.RENDER_URL }}
+        run: |
+          if [ -z "$RENDER_URL" ]; then
+            echo "RENDER_URL is not set; nothing to ping."
+            exit 0
+          fi
+          # A cold start takes ~60s, so allow generous timeouts and one retry.
+          code=$(curl -sS -o /tmp/body -w '%{http_code}' \
+            --max-time 120 --retry 1 --retry-delay 15 \
+            "${RENDER_URL%/}/healthz") || {
+              echo "ping failed to complete"; exit 1; }
+          echo "HTTP $code"
+          cat /tmp/body; echo
+          [ "$code" = "200" ]

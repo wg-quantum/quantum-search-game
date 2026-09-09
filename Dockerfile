@@ -38,5 +38,7 @@ COPY --from=web /web/dist ./app/static
 RUN useradd --create-home --uid 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
+# PORT is what most container hosts inject (Render, Code Engine, Cloud Run);
+# 7860 is the default because that is the port Hugging Face Spaces routes to.
 EXPOSE 7860
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]

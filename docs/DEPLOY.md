@@ -51,13 +51,53 @@ IBM Quantum の Open Plan は月あたり約 10 分 = 600 秒の QPU 時間で�
 投入から結果までの実時間はキュー次第で、実測では 12 秒と 74 秒でした。空いていれば
 速いですが、混雑時は数十分かかり得るのでフロントはポーリングで待ちます。
 
-## Hugging Face Spaces（無料・推奨）
+## ホスティング先の選定（2026-09 時点の調査結果）
 
-無料の CPU basic は 2 vCPU / 16 GB なので、qiskit + aer + matplotlib の依存でも余裕があります。
-無料 Space は公開で、長期間アクセスが無いとスリープし、次のアクセスで復帰します。
+| 候補 | 無料枠 | カード | 判定 |
+|---|---|---|---|
+| Hugging Face Docker Space | **廃止**（無料は static のみ、Docker は PRO $9/月） | — | ✗ |
+| Koyeb | **廃止**（無料は Postgres 5 時間のみ） | — | ✗ |
+| Fly.io | なし（256 MB で約 $2〜3/月） | 必須 | ✗ |
+| Google Cloud Run | あり | 必須 | △ |
+| Northflank Sandbox | サービス 2 つ・**常時稼働** | 必須 | △ RAM 非公開 |
+| **Render 無料** | **750 時間/月** | 記載なし | **採用** |
 
-1. <https://huggingface.co/settings/tokens> で **write** 権限のトークンを作る
-2. 実行:
+ゲーム状態がインメモリなので常駐プロセスが 1 つ必要で、これが Vercel / Netlify /
+Cloudflare のサーバーレスを（バンドルサイズ以前に）失格にします。PythonAnywhere 無料は
+外向き通信がホワイトリスト制で IBM Quantum API に届かないため同様に不可です。
+
+実測ピーク RSS は **156 MB**（起動 105 MB → Grover k=50 で 139 MB → 回路 SVG で 156 MB）
+なので、Render の 512 MB には余裕を持って収まります。
+
+## Render（無料・推奨）
+
+`render.yaml` が Blueprint として置いてあります。0.1 CPU / 512 MB、750 インスタンス時間/月、
+15 分無通信でスリープ・復帰約 1 分、ファイルシステムは揮発（インメモリのゲーム状態は
+スリープで消えますが、一座で遊ぶ分には影響しません）。
+
+1. <https://dashboard.render.com> で **New → Blueprint** を選び、このリポジトリを指定
+2. `IBM_QUANTUM_TOKEN` の入力を求められるので貼る（空のままならシミュレータのみで動作し、
+   実機パネルは自動的に隠れます）
+3. Apply。初回はフロントの `pnpm build` と qiskit 群の `pip install` が走るため数分かかります
+4. 払い出された URL（`https://<name>.onrender.com`）を、GitHub の
+   Settings → Secrets and variables → Actions → **Variables** に `RENDER_URL` として登録
+
+`sync: false` の環境変数は **Blueprint 作成時にしか聞かれない**ので、後から変える場合は
+サービスの Environment 画面で直接編集します。
+
+### スリープ対策（keep-warm）
+
+`.github/workflows/keep-warm.yml` が 10 分おきに `/healthz` を叩きます。動かす時間帯を
+08:00–23:59 JST に絞っているのは枠の都合です: 750 時間/月に対して 31 日は 744 時間なので、
+24 時間叩き続けると枠をほぼ使い切り、超過すると翌月までサービスが停止します。16 時間/日なら
+約 496 時間/月で余裕があります。
+
+GitHub のスケジュール実行は best-effort で 15 分以上遅れることがあるため、「たいてい温かい」
+程度の保証です。またリポジトリに 60 日間活動が無いとスケジュールは自動停止します。
+
+## Hugging Face Spaces（PRO 契約がある場合）
+
+`deploy/hf_space.py` がそのまま使えます。無料 cpu-basic では 402 が返るため PRO が必要です。
 
 ```bash
 pip install huggingface_hub
@@ -69,12 +109,7 @@ HF_TOKEN=hf_xxx IBM_QUANTUM_TOKEN=xxx \
 その他の `IBM_QUANTUM_*` を Space Variable として登録し、Dockerfile が必要とする
 ファイルだけをアップロードします。`.venv` / `node_modules` / `dist` / `.env` は
 staging の段階で除外されるため送信されません。トークンが git remote に書き込まれることも
-ありません。
-
-`--dry-run` で送信内容だけ確認できます。`--private` で非公開 Space。
-
-`IBM_QUANTUM_TOKEN` を渡さなければシミュレータのみでデプロイされ、後から Space の
-Settings → Variables and secrets で追加すれば実機モードが有効になります。
+ありません。`--dry-run` で送信内容だけ確認、`--private` で非公開 Space。
 
 ## Docker をローカルで動かす
 
@@ -94,9 +129,8 @@ cd backend && .venv/bin/uvicorn app.main:app --port 8000
 
 `backend/app/static/` は gitignore 済みなので、コミットに混ざりません。
 
-## Render を使う場合
+## フロントを別オリジンへ分ける場合
 
-無料 Web Service は 512 MB RAM・15 分アイドルでスリープ（復帰に 1 分程度）で、
-qiskit + matplotlib には余裕がありません。使うなら同じ Dockerfile を指定し、
-`--port $PORT` に合わせて `CMD` を上書きしてください。フロントを Vercel などへ分ける場合は
-`ALLOWED_ORIGINS` にそのオリジンを設定し、フロント側の `/api` プロキシを実 URL に向けます。
+単一コンテナをやめてフロントを Vercel などに置くなら、`ALLOWED_ORIGINS` にそのオリジンを
+設定し、フロント側の `/api` プロキシを API の実 URL に向けます。同一オリジンで済むうちは
+分ける利点はありません。

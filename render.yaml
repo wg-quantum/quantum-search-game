@@ -1,0 +1,28 @@
+# Render Blueprint. Create it once from the dashboard (New > Blueprint, pick
+# this repo); Render then reads this file on every push to main.
+#
+# The free instance type is 0.1 CPU / 512 MB, which the app fits into with room
+# to spare (measured peak RSS 156 MB, including qiskit-aer and matplotlib).
+# Render injects PORT, and the Dockerfile's CMD honours it.
+services:
+  - type: web
+    name: quantum-wordle
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      # Prompted for during Blueprint creation and stored by Render, never in
+      # git. Leave it empty to deploy simulator-only: the hardware panel then
+      # hides itself instead of erroring.
+      - key: IBM_QUANTUM_TOKEN
+        sync: false
+      # A free instance shares one QPU token with every visitor, so keep the
+      # process-wide caps explicit here rather than relying on defaults.
+      - key: IBM_QUANTUM_MAX_JOBS_PER_HOUR
+        value: "3"
+      - key: IBM_QUANTUM_MAX_JOBS_PER_DAY
+        value: "6"

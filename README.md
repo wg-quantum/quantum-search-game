@@ -165,14 +165,14 @@ QPU 時間は Open Plan で月約 10 分（600 秒）で、実測で 1 ジョブ
 
 ## デプロイ
 
-FastAPI が API とビルド済みフロントエンドの両方を配信する単一コンテナ構成
-（`Dockerfile`）。無料の Hugging Face Docker Space に 1 コマンドで出せます。
+FastAPI が API とビルド済みフロントエンドの両方を配信する単一コンテナ構成（`Dockerfile`）。
+デプロイ先は **Render の無料プラン**で、`render.yaml` を Blueprint として置いてあります
+（0.1 CPU / 512 MB に対して実測ピーク 156 MB）。ダッシュボードで New → Blueprint から
+このリポジトリを選び、`IBM_QUANTUM_TOKEN` を入力するだけです。
 
-```bash
-HF_TOKEN=hf_xxx IBM_QUANTUM_TOKEN=xxx python deploy/hf_space.py <owner>/quantum-wordle
-```
-
-手順・環境変数・QPU 枠の見積もりは [docs/DEPLOY.md](./docs/DEPLOY.md)。
+Hugging Face の無料 Docker Space は 2026 年時点で廃止され PRO 契約が必要になったため、
+`deploy/hf_space.py` は PRO 向けの選択肢として残してあります。候補の比較・環境変数・
+QPU 枠の見積もり・スリープ対策は [docs/DEPLOY.md](./docs/DEPLOY.md)。
 
 ## Project Status
 
