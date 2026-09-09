@@ -111,13 +111,25 @@ HF_TOKEN=hf_xxx IBM_QUANTUM_TOKEN=xxx \
 staging の段階で除外されるため送信されません。トークンが git remote に書き込まれることも
 ありません。`--dry-run` で送信内容だけ確認、`--private` で非公開 Space。
 
-## Docker をローカルで動かす
+## コンテナをローカルで動かす
+
+Podman でも Docker でもコマンドは同じです（`podman` を `docker` に読み替え）。
 
 ```bash
-docker build -t quantum-wordle .
-docker run --rm -p 7860:7860 --env-file backend/.env quantum-wordle
+podman build -t quantum-wordle:local .
+podman run --rm -p 7860:7860 --env-file backend/.env quantum-wordle:local
 # http://127.0.0.1:7860
 ```
+
+確認済みの挙動:
+
+- イメージ 608 MB、`useradd` した uid 1000 の非 root で起動する
+- `--env-file` を渡さないと `hardware: false` を返し、実機パネルは描画されない（縮退動作）
+- `-e PORT=10000` で待ち受けポートが変わる（Render が注入するのと同じ経路）
+
+Apple Silicon では arm64 でビルドされます。Render は amd64 なので wheel の実体は異なりますが、
+依存解決の破綻は `make deps-check` の方が速く捕まえられます。amd64 で確かめたい場合は
+`--platform linux/amd64` を付けられますが、エミュレーションで大幅に遅くなります。
 
 ## Docker を使わずに本番配置を再現する
 
