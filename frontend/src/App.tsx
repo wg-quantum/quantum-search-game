@@ -16,6 +16,47 @@ interface Meta {
   dictionarySize: number;
 }
 
+/**
+ * IBM Community Japan ナレッジモール研究の成果物である旨の表示。
+ * 事務局から指定された文言・リンクなので、文面は変更しないこと。
+ */
+function KnowledgeMallNotice() {
+  return (
+    <aside className="w-full rounded-lg border border-line bg-surface px-4 py-3 text-[11px] leading-relaxed text-muted">
+      この記事は、
+      <a
+        href="https://www.ibm.com/community/japan/jp-ja/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-cyan underline decoration-dotted underline-offset-2 hover:text-fg"
+      >
+        IBM Community Japan
+      </a>
+      の主催する
+      <a
+        href="https://community.ibm.com/community/user/japan/blogs/ibm-ibm-community-japan-office1/2022/08/05/knowledge-mall-research?CommunityKey=7777a681-adc0-4486-820a-f67b0dfde91b#content"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-cyan underline decoration-dotted underline-offset-2 hover:text-fg"
+      >
+        2026年ナレッジモール研究
+      </a>
+      における、「WG ID: 2026-B-04-b 量子コンピューターの活用研究 -量子ユーティリティーの実験-」の成果物です。
+      <br />
+      当記事の著作権はIBMに帰属します。詳細は
+      <a
+        href="https://higherlogicdownload.s3.amazonaws.com/IMWUC/2fde9da6-6e7d-43b4-bae3-7f25168bbbd0/UploadedImages/japan/2025/download/ibm-community-japan-disclaimer.pdf"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-cyan underline decoration-dotted underline-offset-2 hover:text-fg"
+      >
+        こちら
+      </a>
+      を参照ください。
+    </aside>
+  );
+}
+
 export default function App() {
   const [meta, setMeta] = useState<Meta | null>(null);
   const [guesses, setGuesses] = useState<GuessEntry[]>([]);
@@ -173,6 +214,7 @@ export default function App() {
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center gap-5 p-4 sm:p-6">
       {showTutorial && <Tutorial onClose={closeTutorial} />}
+      <KnowledgeMallNotice />
       <header className="flex w-full items-center justify-between border-b border-line pb-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">
