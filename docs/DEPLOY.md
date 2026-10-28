@@ -102,7 +102,7 @@ GitHub のスケジュール実行は best-effort で 15 分以上遅れるこ�
 ```bash
 pip install huggingface_hub
 HF_TOKEN=hf_xxx IBM_QUANTUM_TOKEN=xxx \
-  python deploy/hf_space.py <owner>/quantum-wordle
+  python deploy/hf_space.py <owner>/quantum-search-game
 ```
 
 スクリプトは Space を作成（既にあれば再利用）し、`IBM_QUANTUM_TOKEN` を Space Secret に、
@@ -116,8 +116,8 @@ staging の段階で除外されるため送信されません。トークンが
 Podman でも Docker でもコマンドは同じです（`podman` を `docker` に読み替え）。
 
 ```bash
-podman build -t quantum-wordle:local .
-podman run --rm -p 7860:7860 --env-file backend/.env quantum-wordle:local
+podman build -t quantum-search-game:local .
+podman run --rm -p 7860:7860 --env-file backend/.env quantum-search-game:local
 # http://127.0.0.1:7860
 ```
 

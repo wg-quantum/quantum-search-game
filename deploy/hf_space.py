@@ -87,7 +87,7 @@ def stage(destination: Path) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("space", help="target Space, e.g. yourname/quantum-wordle")
+    parser.add_argument("space", help="target Space, e.g. yourname/quantum-search-game")
     parser.add_argument(
         "--private", action="store_true", help="create the Space as private"
     )
@@ -156,7 +156,7 @@ def main() -> int:
             folder_path=str(staging),
             repo_id=args.space,
             repo_type="space",
-            commit_message="deploy quantum-wordle",
+            commit_message="deploy quantum-search-game",
             delete_patterns=["*"],  # mirror: drop remote files we no longer ship
         )
         print(f"\nhttps://huggingface.co/spaces/{args.space}")

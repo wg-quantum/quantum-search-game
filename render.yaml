@@ -6,7 +6,7 @@
 # Render injects PORT, and the Dockerfile's CMD honours it.
 services:
   - type: web
-    name: quantum-wordle
+    name: quantum-search-game
     runtime: docker
     plan: free
     region: singapore

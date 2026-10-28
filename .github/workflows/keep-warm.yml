@@ -9,7 +9,7 @@
 # through the Japanese day and leaves a wide margin.
 #
 # Set the repository variable RENDER_URL (Settings > Secrets and variables >
-# Actions > Variables) to the service URL, e.g. https://quantum-wordle.onrender.com
+# Actions > Variables) to the service URL, e.g. https://quantum-search-game.onrender.com
 # The workflow no-ops until that exists.
 #
 # GitHub's scheduled runs are best-effort and can be delayed past 15 minutes
