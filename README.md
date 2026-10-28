@@ -1,11 +1,11 @@
-# Quantum Wordle
+# Quantum Search Game（量子探索ゲーム）
 
 この記事は、[IBM Community Japan](https://www.ibm.com/community/japan/jp-ja/)の主催する[2026年ナレッジモール研究](https://community.ibm.com/community/user/japan/blogs/ibm-ibm-community-japan-office1/2022/08/05/knowledge-mall-research?CommunityKey=7777a681-adc0-4486-820a-f67b0dfde91b#content)における、「WG ID: 2026-B-04-b 量子コンピューターの活用研究 -量子ユーティリティーの実験-」の成果物です。
 当記事の著作権はIBMに帰属します。詳細は[こちら](https://higherlogicdownload.s3.amazonaws.com/IMWUC/2fde9da6-6e7d-43b4-bae3-7f25168bbbd0/UploadedImages/japan/2025/download/ibm-community-japan-disclaimer.pdf)を参照ください。
 
 ---
 
-Wordleを題材に、Grover Algorithm(Oracle・Diffusion・振幅増幅)を直感的に学べる教育ゲーム。
+Wordle に着想を得た単語当てゲームを題材に、Grover Algorithm(Oracle・Diffusion・振幅増幅)を直感的に学べる教育ゲーム。
 
 これは「Wordleを解くゲーム」ではなく、**「Oracleを変えればGroverはどんな探索にも使える」ことを体験するためのゲーム**です。Groverは正解を知りません。フィードバックと整合する候補集合をOracleがマークし、その振幅が増幅される様子を観察します。
 
@@ -26,9 +26,9 @@ Backend (FastAPI)
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ Quantum Wordle                        [使い方] [新しいゲーム] │
+│ Quantum Search Game                   [使い方] [新しいゲーム] │
 ├────────────────────────────┬─────────────────────────────┤
-│  Wordle 盤面 (6 × 5)         │  候補空間パネル               │
+│  単語盤面 (6 × 5)            │  候補空間パネル               │
 │  ■ ■ ■ ■ ■   ← 推測を入力     │   候補 294 / 2315 語         │
 │  緑=一致 / 黄=位置違い / 灰=無  │   [logスケールメーター]       │
 │  スクリーンキーボード          │                             │
@@ -185,3 +185,10 @@ Phase 1〜6 完了 + 実機モードとデプロイを追加。バックエン�
 TypeScript strict ビルド・E2E 疎通確認済み。
 
 進捗は [TODO.md](./TODO.md)。
+
+---
+
+© Copyright IBM Corporation 2026
+
+Wordle is a trademark of The New York Times Company. This project is not
+affiliated with or endorsed by The New York Times Company.

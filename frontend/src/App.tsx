@@ -218,10 +218,10 @@ export default function App() {
       <header className="flex w-full items-center justify-between border-b border-line pb-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">
-            Quantum <span className="bg-gradient-to-r from-cyan to-violet bg-clip-text text-transparent">Wordle</span>
+            Quantum <span className="bg-gradient-to-r from-cyan to-violet bg-clip-text text-transparent">Search Game</span>
           </h1>
           <p className="text-xs text-muted">
-            Grover Algorithm を体験して学ぶ Wordle
+            Grover Algorithm を体験して学ぶ単語当てゲーム（Wordle-inspired）
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -298,6 +298,13 @@ export default function App() {
 
       {/* Renders nothing unless the server has IBM Quantum credentials. */}
       <HardwareLab gameId={meta.gameId} />
+
+      <footer className="w-full border-t border-line pt-3 text-center text-[11px] leading-relaxed text-muted">
+        © Copyright IBM Corporation 2026
+        <br />
+        Wordle is a trademark of The New York Times Company. This project is not
+        affiliated with or endorsed by The New York Times Company.
+      </footer>
     </main>
   );
 }

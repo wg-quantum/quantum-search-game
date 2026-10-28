@@ -38,12 +38,12 @@ const STEPS: Step[] = [
     body: (
       <>
         <p>
-          これは <strong className="text-fg">Wordle を解くためのゲームではありません</strong>。
+          Wordle に着想を得た単語当ての形をとっていますが、<strong className="text-fg">単語を当てること自体が目的のゲームではありません</strong>。
           量子探索アルゴリズム <strong className="text-cyan">Grover</strong>（Oracle と
           振幅増幅）を、手を動かして直感的に理解するためのゲームです。
         </p>
         <p>
-          Wordle の盤面は「Oracle に渡す条件」を作るための入口として使います。
+          単語当ての盤面は「Oracle に渡す条件」を作るための入口として使います。
         </p>
       </>
     ),

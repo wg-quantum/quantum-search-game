@@ -1,4 +1,4 @@
-# Quantum Wordle — Design Document
+# Quantum Search Game — Design Document
 
 Status: **Approved for implementation** (implementation starts only on explicit "実装開始")
 Last updated: 2026-07-06

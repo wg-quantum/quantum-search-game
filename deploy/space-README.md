@@ -1,5 +1,5 @@
 ---
-title: Quantum Wordle
+title: Quantum Search Game
 emoji: 🎲
 colorFrom: indigo
 colorTo: green
@@ -9,7 +9,7 @@ pinned: false
 short_description: Grover探索でWordleの候補を絞る量子ゲーム
 ---
 
-# Quantum Wordle
+# Quantum Search Game
 
 Wordle を解きながら Grover 探索を体験する教材です。オラクルは**答えを知りません** —
 毎ターンのフィードバックから絞り込まれた「候補集合」の位相を反転するだけで、

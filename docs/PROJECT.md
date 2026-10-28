@@ -1,4 +1,4 @@
-# Quantum Wordle
+# Quantum Search Game
 
 ## Goal
 

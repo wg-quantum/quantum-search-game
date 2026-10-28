@@ -24,7 +24,7 @@ def create_app(
 ) -> FastAPI:
     settings = settings or Settings.from_env()
 
-    app = FastAPI(title="Quantum Wordle API", version="0.3.0")
+    app = FastAPI(title="Quantum Search Game API", version="0.3.0")
     app.state.settings = settings
     app.state.store = store or InMemoryGameStore()
     app.state.quantum_backend = quantum_backend or AerStatevectorBackend()
